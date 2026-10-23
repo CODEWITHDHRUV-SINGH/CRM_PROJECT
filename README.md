@@ -184,36 +184,4 @@ Pytest + Playwright + error monitoring
 API tests, UI flows, logs, error alerts and uptime monitoring.
 
 
-universal-ai-crm/
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── features/
-│   │   │   ├── leads/
-│   │   │   ├── contacts/
-│   │   │   ├── deals/
-│   │   │   ├── activities/
-│   │   │   ├── payments/
-│   │   │   └── ai-assistant/
-│   │   ├── api/
-│   │   └── auth/
-│   └── package.json
-├── backend/
-│   ├── app/
-│   │   ├── api/v1/
-│   │   ├── core/
-│   │   ├── models/
-│   │   ├── schemas/
-│   │   ├── repositories/
-│   │   ├── services/
-│   │   ├── permissions/
-│   │   ├── ai/
-│   │   ├── automations/
-│   │   └── integrations/
-│   ├── migrations/
-│   ├── tests/
-│   └── requirements.txt
-├── docker-compose.yml
-├── .env.example
-└── README.md
+![alt text](image-10.png)
