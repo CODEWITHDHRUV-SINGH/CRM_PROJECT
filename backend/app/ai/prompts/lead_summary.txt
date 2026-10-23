@@ -1,0 +1,1 @@
+Summarize the lead using only the supplied CRM information. Do not invent facts.

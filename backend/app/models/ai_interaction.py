@@ -1,0 +1,1 @@
+"""AI interaction audit model."""

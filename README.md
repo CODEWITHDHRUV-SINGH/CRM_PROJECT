@@ -185,3 +185,62 @@ API tests, UI flows, logs, error alerts and uptime monitoring.
 
 
 ![alt text](image-10.png)
+
+## Project structure
+
+The repository is organized as a React + TypeScript frontend and a FastAPI backend.
+
+```text
+frontend/
+	public/                         Browser icons and CRM logo
+	src/
+		assets/                       Images, icons, and fonts
+		components/                   Shared common, table, chart, and feedback UI
+		layouts/                      Dashboard and authentication layouts
+		pages/                        Login, dashboard, leads, contacts, deals, and reports
+		features/                     Feature modules for leads, contacts, deals,
+																	activities, payments, and AI assistant
+		api/                          Shared API client and endpoint definitions
+		auth/                         Authentication provider and route guard
+		hooks/ types/ utils/ routes/   Shared frontend utilities
+		App.tsx
+		main.tsx
+	package.json
+	tsconfig.json
+	vite.config.ts
+
+backend/
+	app/
+		api/v1/                       Versioned REST API routers
+		core/                         Settings, security, middleware, logging
+		db/                           SQLAlchemy base, sessions, and dependencies
+		models/ schemas/               Database models and API schemas
+		repositories/ services/        Data access and business logic
+		permissions/                  Role and record-level authorization
+		ai/                           AI providers, prompts, and workflows
+		automations/                  Workflow rules and background jobs
+		integrations/                 Email, calendar, WhatsApp, and storage
+		main.py                       FastAPI application entry point
+	migrations/                     Alembic migrations
+	tests/                          Unit, integration, and security tests
+	requirements.txt
+	Dockerfile
+
+docker-compose.yml                Local frontend, backend, and PostgreSQL
+.env.example                      Root environment template
+.gitignore
+```
+
+The listed feature files are starter stubs; business workflows, persistence, authentication, and integrations still need implementation.
+
+## Local development
+
+Copy `.env.example` to `.env`, then start the services with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+The Vite frontend is available at `http://localhost:5173`, the FastAPI docs at `http://localhost:8000/docs`, and the API health check at `http://localhost:8000/health`.
+
+To run the frontend outside Docker, use `cd frontend && npm install && npm run dev`. To run the backend locally, install `backend/requirements.txt` and start it with `uvicorn app.main:app --reload` from the `backend/` directory.

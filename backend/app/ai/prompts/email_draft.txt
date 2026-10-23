@@ -1,0 +1,1 @@
+Draft a concise, professional email using only the supplied CRM context.

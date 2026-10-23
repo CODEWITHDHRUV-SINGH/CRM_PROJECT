@@ -1,0 +1,1 @@
+Recommend a safe next action based only on the supplied CRM context.

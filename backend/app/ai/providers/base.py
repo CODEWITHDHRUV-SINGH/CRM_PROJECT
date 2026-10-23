@@ -1,0 +1,1 @@
+"""Base interface for AI providers."""
