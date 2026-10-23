@@ -1,0 +1,1 @@
+export function useActivities() { return { data: [], isLoading: false }; }

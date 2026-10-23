@@ -1,0 +1,1 @@
+export function useContacts() { return { data: [], isLoading: false }; }
