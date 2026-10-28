@@ -1,5 +1,6 @@
-import { MoreHorizontal } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import { DataTable, type Column } from '../../../components/tables/DataTable';
+import { RowMenu } from '../../../components/common/RowMenu';
 import {
   LEAD_STATUS_LABELS,
   type Lead,
@@ -14,6 +15,8 @@ interface LeadTableProps {
   onDelete: (lead: Lead) => void;
 }
 
+const AVATAR_COLORS = ['coral', 'blue', 'green', 'yellow', 'purple'];
+
 export function LeadTable({ data, isLoading, onRowClick, onEdit, onDelete }: LeadTableProps) {
   const columns: Column<Lead>[] = [
     {
@@ -21,7 +24,7 @@ export function LeadTable({ data, isLoading, onRowClick, onEdit, onDelete }: Lea
       header: 'Lead',
       render: (lead) => (
         <div className="lead-person">
-          <span className={`lead-avatar avatar-${['coral', 'blue', 'green', 'yellow', 'purple'][lead.name.length % 5]}`}>
+          <span className={`lead-avatar avatar-${AVATAR_COLORS[lead.name.length % AVATAR_COLORS.length]}`}>
             {lead.name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}
           </span>
           <div>
@@ -60,23 +63,27 @@ export function LeadTable({ data, isLoading, onRowClick, onEdit, onDelete }: Lea
       width: '80px',
       render: (lead) => (
         <div style={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-          <button
-            className="row-more"
-            type="button"
-            aria-label={`Edit ${lead.name}`}
-            onClick={(e) => { e.stopPropagation(); onEdit(lead); }}
-          >
-            <MoreHorizontal size={16} />
-          </button>
-          <button
-            className="row-more"
-            type="button"
-            aria-label={`Delete ${lead.name}`}
-            onClick={(e) => { e.stopPropagation(); onDelete(lead); }}
-            style={{ color: '#bd6948' }}
-          >
-            ×
-          </button>
+          <RowMenu
+            ariaLabel={`Actions for ${lead.name}`}
+            items={[
+              {
+                label: 'View details',
+                icon: <Eye size={13} />,
+                onClick: () => onRowClick(lead),
+              },
+              {
+                label: 'Edit',
+                icon: <Pencil size={13} />,
+                onClick: () => onEdit(lead),
+              },
+              {
+                label: 'Delete',
+                icon: <Trash2 size={13} />,
+                onClick: () => onDelete(lead),
+                danger: true,
+              },
+            ]}
+          />
         </div>
       ),
     },

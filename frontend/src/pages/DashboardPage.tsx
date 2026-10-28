@@ -1,5 +1,5 @@
-import { useMemo, useState, type FormEvent } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Activity,
   ArrowDownRight,
@@ -9,31 +9,30 @@ import {
   Check,
   ChevronDown,
   CircleDollarSign,
+  Eye,
   MoreHorizontal,
+  Pencil,
   Plus,
   Sparkles,
   Target,
+  Trash2,
   UsersRound,
-  X,
 } from 'lucide-react';
 import { useToast } from '../components/feedback/Toast';
+import { Modal } from '../components/common/Modal';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { RowMenu } from '../components/common/RowMenu';
+import { LeadForm } from '../features/leads/components/LeadForm';
+import { LeadDetails } from '../features/leads/components/LeadDetails';
+import { LeadScoreBadge } from '../features/leads/components/LeadScoreBadge';
+import { useLeads } from '../features/leads/hooks/useLeads';
+import {
+  LEAD_STATUS_LABELS,
+  type CreateLeadInput,
+  type Lead,
+} from '../features/leads/types/lead.types';
+import { getErrorMessage } from '../api/errorHandler';
 import type { DashboardOutletContext } from '../layouts/DashboardLayout';
-
-interface Lead {
-  name: string;
-  company: string;
-  email: string;
-  status: 'Qualified' | 'New' | 'Contacted';
-  initials: string;
-  color: string;
-}
-
-const initialLeads: Lead[] = [
-  { name: 'Olivia Rhye', company: 'Layers', email: 'olivia@layers.com', status: 'Qualified', initials: 'OR', color: 'coral' },
-  { name: 'Phoenix Baker', company: 'Quotient', email: 'phoenix@quotient.co', status: 'New', initials: 'PB', color: 'blue' },
-  { name: 'Lana Steiner', company: 'Circooles', email: 'lana@circooles.com', status: 'Contacted', initials: 'LS', color: 'green' },
-  { name: 'Demi Wilkinson', company: 'Catalog', email: 'demi@catalog.com', status: 'Qualified', initials: 'DW', color: 'yellow' },
-];
 
 const stages = [
   { label: 'New leads', value: 128, width: '92%', color: 'stage-orange' },
@@ -43,39 +42,62 @@ const stages = [
   { label: 'Won', value: 18, width: '23%', color: 'stage-ink' },
 ];
 
+const AVATAR_COLORS = ['coral', 'blue', 'green', 'yellow', 'purple'];
+
 export default function DashboardPage() {
   const { search } = useOutletContext<DashboardOutletContext>();
+  const navigate = useNavigate();
   const toast = useToast();
-  const [leads, setLeads] = useState(initialLeads);
-  const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
 
-  const visibleLeads = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return leads;
-    return leads.filter((lead) =>
-      `${lead.name} ${lead.company} ${lead.email}`.toLowerCase().includes(q),
-    );
-  }, [leads, search]);
+  const { data: leads, isLoading, error, create, update, remove } = useLeads({ search });
 
-  function createLead(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const name = String(formData.get('name')).trim();
-    const company = String(formData.get('company')).trim();
-    const email = String(formData.get('email')).trim();
-    const initials = name.split(/\s+/).map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+  // Add / Edit / View / Delete states
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Lead | null>(null);
+  const [viewTarget, setViewTarget] = useState<Lead | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    setLeads((curr) => [
-      { name, company, email, status: 'New', initials, color: 'purple' },
-      ...curr,
-    ]);
-    setIsLeadModalOpen(false);
-    toast.success(`${name} was added to your leads`);
+  async function handleCreate(values: CreateLeadInput) {
+    try {
+      await create(values);
+      toast.success(`${values.name} was added to your leads`);
+      setIsCreateOpen(false);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  }
+
+  async function handleUpdate(values: CreateLeadInput) {
+    if (!editTarget) return;
+    try {
+      await update({ ...values, id: editTarget.id });
+      toast.success('Lead updated');
+      setEditTarget(null);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await remove(deleteTarget.id);
+      toast.success(`${deleteTarget.name} deleted`);
+      setDeleteTarget(null);
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   const today = new Intl.DateTimeFormat('en', {
     weekday: 'short', month: 'short', day: 'numeric',
   }).format(new Date());
+
+  const recentLeads = leads.slice(0, 5);
 
   return (
     <div className="dashboard-content">
@@ -89,7 +111,11 @@ export default function DashboardPage() {
           <button className="secondary-button" type="button">
             <CalendarDays size={16} /> Last 30 days <ChevronDown size={14} />
           </button>
-          <button className="primary-button" type="button" onClick={() => setIsLeadModalOpen(true)}>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={() => setIsCreateOpen(true)}
+          >
             <Plus size={17} /> Add lead
           </button>
         </div>
@@ -102,7 +128,10 @@ export default function DashboardPage() {
             <button className="more-button" aria-label="More" type="button"><MoreHorizontal size={19} /></button>
           </div>
           <p className="stat-label">Total leads</p>
-          <div className="stat-value-row"><strong>1,284</strong><span className="trend trend-up"><ArrowUpRight size={14} /> 12.8%</span></div>
+          <div className="stat-value-row">
+            <strong>{leads.length || '1,284'}</strong>
+            <span className="trend trend-up"><ArrowUpRight size={14} /> 12.8%</span>
+          </div>
           <p className="stat-footnote">vs. previous 30 days</p>
         </article>
         <article className="stat-card">
@@ -111,7 +140,10 @@ export default function DashboardPage() {
             <button className="more-button" aria-label="More" type="button"><MoreHorizontal size={19} /></button>
           </div>
           <p className="stat-label">Open opportunities</p>
-          <div className="stat-value-row"><strong>৳ 8.42M</strong><span className="trend trend-up"><ArrowUpRight size={14} /> 8.2%</span></div>
+          <div className="stat-value-row">
+            <strong>৳ 8.42M</strong>
+            <span className="trend trend-up"><ArrowUpRight size={14} /> 8.2%</span>
+          </div>
           <p className="stat-footnote">across 46 active deals</p>
         </article>
         <article className="stat-card">
@@ -120,7 +152,10 @@ export default function DashboardPage() {
             <button className="more-button" aria-label="More" type="button"><MoreHorizontal size={19} /></button>
           </div>
           <p className="stat-label">Revenue this month</p>
-          <div className="stat-value-row"><strong>৳ 2.16M</strong><span className="trend trend-up"><ArrowUpRight size={14} /> 18.4%</span></div>
+          <div className="stat-value-row">
+            <strong>৳ 2.16M</strong>
+            <span className="trend trend-up"><ArrowUpRight size={14} /> 18.4%</span>
+          </div>
           <p className="stat-footnote">৳ 340K above your target</p>
         </article>
         <article className="stat-card">
@@ -129,7 +164,10 @@ export default function DashboardPage() {
             <button className="more-button" aria-label="More" type="button"><MoreHorizontal size={19} /></button>
           </div>
           <p className="stat-label">Conversion rate</p>
-          <div className="stat-value-row"><strong>24.6%</strong><span className="trend trend-down"><ArrowDownRight size={14} /> 2.1%</span></div>
+          <div className="stat-value-row">
+            <strong>24.6%</strong>
+            <span className="trend trend-down"><ArrowDownRight size={14} /> 2.1%</span>
+          </div>
           <p className="stat-footnote">lead to customer conversion</p>
         </article>
       </section>
@@ -158,7 +196,9 @@ export default function DashboardPage() {
           </div>
           <div className="pipeline-footer">
             <span><i className="legend-dot legend-orange" /> 317 total deals</span>
-            <button type="button">View pipeline <ArrowRight size={14} /></button>
+            <button type="button" onClick={() => navigate('/deals')}>
+              View pipeline <ArrowRight size={14} />
+            </button>
           </div>
         </article>
 
@@ -194,8 +234,8 @@ export default function DashboardPage() {
           <div><h2>Recently added leads</h2><p>Keep the conversation moving</p></div>
           <div className="leads-panel-actions">
             <span className="lead-total">{leads.length} leads</span>
-            <button className="table-filter-button" type="button">
-              <span className="filter-dot" /> All leads <ChevronDown size={14} />
+            <button className="text-button" type="button" onClick={() => navigate('/leads')}>
+              View all <ArrowRight size={14} />
             </button>
           </div>
         </div>
@@ -203,79 +243,140 @@ export default function DashboardPage() {
           <table className="leads-table">
             <thead>
               <tr>
-                <th>LEAD NAME</th><th>COMPANY</th><th>STATUS</th><th>EMAIL</th>
+                <th>LEAD NAME</th>
+                <th>COMPANY</th>
+                <th>STATUS</th>
+                <th>SCORE</th>
                 <th aria-label="Actions" />
               </tr>
             </thead>
             <tbody>
-              {visibleLeads.map((lead) => (
-                <tr key={`${lead.email}-${lead.name}`}>
+              {isLoading && (
+                <tr><td className="empty-search" colSpan={5}>Loading leads...</td></tr>
+              )}
+              {!isLoading && error && (
+                <tr><td className="empty-search" colSpan={5}>{error}</td></tr>
+              )}
+              {!isLoading && !error && recentLeads.length === 0 && (
+                <tr><td className="empty-search" colSpan={5}>No leads yet — add your first one.</td></tr>
+              )}
+              {!isLoading && !error && recentLeads.map((lead) => (
+                <tr
+                  key={lead.id}
+                  onClick={() => setViewTarget(lead)}
+                  style={{ cursor: 'pointer' }}
+                >
                   <td>
                     <div className="lead-person">
-                      <span className={`lead-avatar avatar-${lead.color}`}>{lead.initials}</span>
+                      <span className={`lead-avatar avatar-${AVATAR_COLORS[lead.name.length % AVATAR_COLORS.length]}`}>
+                        {lead.name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}
+                      </span>
                       <strong>{lead.name}</strong>
                     </div>
                   </td>
                   <td><span className="company-name">{lead.company}</span></td>
                   <td>
-                    <span className={`status-pill status-${lead.status.toLowerCase()}`}>
-                      <i />{lead.status}
+                    <span className={`status-pill status-${lead.status}`}>
+                      <i />{LEAD_STATUS_LABELS[lead.status]}
                     </span>
                   </td>
-                  <td className="lead-email">{lead.email}</td>
-                  <td>
-                    <button className="row-more" type="button" aria-label={`More for ${lead.name}`}>
-                      <MoreHorizontal size={18} />
-                    </button>
+                  <td><LeadScoreBadge score={lead.score} /></td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <RowMenu
+                      ariaLabel={`Actions for ${lead.name}`}
+                      items={[
+                        {
+                          label: 'View details',
+                          icon: <Eye size={13} />,
+                          onClick: () => setViewTarget(lead),
+                        },
+                        {
+                          label: 'Edit',
+                          icon: <Pencil size={13} />,
+                          onClick: () => setEditTarget(lead),
+                        },
+                        {
+                          label: 'Delete',
+                          icon: <Trash2 size={13} />,
+                          onClick: () => setDeleteTarget(lead),
+                          danger: true,
+                        },
+                      ]}
+                    />
                   </td>
                 </tr>
               ))}
-              {visibleLeads.length === 0 && (
-                <tr>
-                  <td className="empty-search" colSpan={5}>No leads match “{search}”.</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
         <div className="table-footer">
-          <span>Showing <strong>{visibleLeads.length}</strong> of <strong>{leads.length}</strong> leads</span>
+          <span>
+            Showing <strong>{recentLeads.length}</strong> of <strong>{leads.length}</strong> leads
+          </span>
+          <button type="button" onClick={() => navigate('/leads')}>
+            Go to leads <ArrowRight size={14} />
+          </button>
         </div>
       </section>
 
-      {isLeadModalOpen && (
-        <div
-          className="modal-backdrop"
-          role="presentation"
-          onMouseDown={(e) => { if (e.target === e.currentTarget) setIsLeadModalOpen(false); }}
-        >
-          <section className="lead-modal" role="dialog" aria-modal="true" aria-labelledby="add-lead-title">
-            <div className="modal-heading">
-              <div><p className="eyebrow">NEW CONTACT</p><h2 id="add-lead-title">Add a lead</h2></div>
-              <button className="icon-button" type="button" aria-label="Close" onClick={() => setIsLeadModalOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <p className="modal-description">Add someone new to your pipeline. You can fill in the rest later.</p>
-            <form className="lead-form" onSubmit={createLead}>
-              <label htmlFor="lead-name">Full name</label>
-              <input id="lead-name" name="name" placeholder="e.g. Sam Taylor" required autoFocus />
-              <label htmlFor="lead-company">Company</label>
-              <input id="lead-company" name="company" placeholder="Company name" required />
-              <label htmlFor="lead-email">Work email</label>
-              <input id="lead-email" name="email" type="email" placeholder="sam@company.com" required />
-              <div className="modal-actions">
-                <button className="secondary-button" type="button" onClick={() => setIsLeadModalOpen(false)}>
-                  Cancel
-                </button>
-                <button className="primary-button" type="submit">
-                  <Plus size={16} /> Add lead
-                </button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
+      {/* CREATE modal */}
+      <Modal
+        open={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
+        title="Add a lead"
+        subtitle="Add someone new to your pipeline."
+      >
+        <LeadForm
+          onSubmit={handleCreate}
+          onCancel={() => setIsCreateOpen(false)}
+        />
+      </Modal>
+
+      {/* VIEW modal */}
+      <Modal
+        open={!!viewTarget}
+        onClose={() => setViewTarget(null)}
+        title="Lead details"
+      >
+        {viewTarget && (
+          <LeadDetails
+            lead={viewTarget}
+            onClose={() => setViewTarget(null)}
+            onEdit={() => {
+              setEditTarget(viewTarget);
+              setViewTarget(null);
+            }}
+          />
+        )}
+      </Modal>
+
+      {/* EDIT modal */}
+      <Modal
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        title="Edit lead"
+        subtitle={editTarget?.name}
+      >
+        {editTarget && (
+          <LeadForm
+            initial={editTarget}
+            onSubmit={handleUpdate}
+            onCancel={() => setEditTarget(null)}
+          />
+        )}
+      </Modal>
+
+      {/* DELETE confirmation */}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={`Delete ${deleteTarget?.name ?? 'lead'}?`}
+        description="This action cannot be undone. All notes and activity will be removed."
+        confirmText="Delete"
+        variant="danger"
+        loading={isDeleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
