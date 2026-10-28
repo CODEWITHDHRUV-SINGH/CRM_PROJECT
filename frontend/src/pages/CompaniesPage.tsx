@@ -1,3 +1,12 @@
+import { Building2 } from 'lucide-react';
+import { ModulePlaceholder } from '../components/feedback/ModulePlaceholder';
+
 export default function CompaniesPage() {
-  return <main><h1>Companies</h1></main>;
+  return (
+    <ModulePlaceholder
+      title="Companies"
+      description="Track organizations and their relationships."
+      icon={<Building2 size={22} />}
+    />
+  );
 }

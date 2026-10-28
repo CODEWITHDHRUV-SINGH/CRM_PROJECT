@@ -1,3 +1,12 @@
+import { Activity } from 'lucide-react';
+import { ModulePlaceholder } from '../components/feedback/ModulePlaceholder';
+
 export default function TasksPage() {
-  return <main><h1>Tasks</h1></main>;
+  return (
+    <ModulePlaceholder
+      title="Tasks"
+      description="Manage follow-ups, calls, and meetings."
+      icon={<Activity size={22} />}
+    />
+  );
 }

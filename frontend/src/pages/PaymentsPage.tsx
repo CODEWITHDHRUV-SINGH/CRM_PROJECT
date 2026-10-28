@@ -1,3 +1,12 @@
+import { Receipt } from 'lucide-react';
+import { ModulePlaceholder } from '../components/feedback/ModulePlaceholder';
+
 export default function PaymentsPage() {
-  return <main><h1>Payments</h1></main>;
+  return (
+    <ModulePlaceholder
+      title="Payments"
+      description="Record payments and manage refunds."
+      icon={<Receipt size={22} />}
+    />
+  );
 }

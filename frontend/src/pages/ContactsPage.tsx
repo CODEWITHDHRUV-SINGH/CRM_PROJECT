@@ -1,3 +1,12 @@
+import { UsersRound } from 'lucide-react';
+import { ModulePlaceholder } from '../components/feedback/ModulePlaceholder';
+
 export default function ContactsPage() {
-  return <main><h1>Contacts</h1></main>;
+  return (
+    <ModulePlaceholder
+      title="Contacts"
+      description="Manage people and decision-makers in your network."
+      icon={<UsersRound size={22} />}
+    />
+  );
 }
